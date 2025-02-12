@@ -5,6 +5,7 @@ import { Navbar, NavbarBrand, NavbarContent } from "@nextui-org/react";
 
 import { EventSelector } from "./EventSelector";
 import TeamSelect from "./team-select";
+import { ThemeSwitch } from "./theme-switch";
 
 import { useTeam } from "@/contexts/TeamContext";
 
@@ -21,6 +22,7 @@ export function MainNavbar() {
           <>
             <TeamSelect />
             <EventSelector />
+            <ThemeSwitch />
           </>
         )}
       </NavbarContent>

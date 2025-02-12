@@ -1,149 +1,103 @@
 // types/checklist.ts
-export type ChecklistItemType =
-  | "boolean"
-  | "number"
-  | "text"
-  | "photo"
-  | "select"
-  | "multiselect"
-  | "alliance-dependent"
-  | "compound";
 
-export interface ChecklistItemBase {
-  id: string;
-  label: string;
-  type: ChecklistItemType;
-  required: boolean;
-  description?: string;
-  dependsOn?: {
-    itemId: string;
-    value: any;
-  };
-  group?: string; // Para agrupar items dentro de una sección
+// Tipos básicos de elementos
+export type ChecklistItemType = "boolean" | "number" | "text" | "select";
+
+export interface ValidationRule {
+  type: "required" | "min" | "max" | "regex" | "custom";
+  value?: any;
+  message: string;
+  validator?: (value: any) => boolean;
 }
 
-// Interfaces específicas para cada tipo de item
-export interface BooleanChecklistItem extends ChecklistItemBase {
-  type: "boolean";
-  defaultValue?: boolean;
-}
-
-export interface NumberChecklistItem extends ChecklistItemBase {
-  type: "number";
-  defaultValue?: number;
-  min?: number;
-  max?: number;
-  unit?: string;
-}
-
-export interface TextChecklistItem extends ChecklistItemBase {
-  type: "text";
-  defaultValue?: string;
-  multiline?: boolean;
-}
-
-export interface PhotoChecklistItem extends ChecklistItemBase {
-  type: "photo";
-  maxPhotos?: number;
-  requiredAngles?: string[]; // e.g. ['front', 'side', 'back']
-}
-
-export interface SelectChecklistItem extends ChecklistItemBase {
-  type: "select" | "multiselect";
-  options: string[];
-  defaultValue?: string | string[];
-}
-
-export interface AllianceDependentItem extends ChecklistItemBase {
-  type: "alliance-dependent";
-  redLabel: string;
-  blueLabel: string;
-}
-
-export interface ChecklistGroup {
-  id: string;
-  name: string;
-  description?: string;
-  order: number;
-}
-
-export interface ChecklistSection {
+// Elemento base del que heredan los demás
+interface BaseElement {
   id: string;
   title: string;
+  description?: string;
   order: number;
-  groups: ChecklistGroup[];
-  items: ChecklistItem[];
 }
 
-export interface Checklist {
+// Item individual del checklist
+export interface ChecklistItem extends BaseElement {
+  type: "item";
+  required: boolean;
+  inputType: ChecklistItemType;
+  validation?: ValidationRule[];
+  defaultValue?: any;
+  options?: string[]; // Para tipo 'select'
+  critical?: boolean; // Si es crítico, falla toda la inspección
+  dependencies?: {
+    itemId: string;
+    condition: "equals" | "not-equals" | "greater" | "less";
+    value: any;
+  }[];
+}
+
+// Grupo de items
+export interface ChecklistGroup extends BaseElement {
+  type: "group";
+  elements: Array<ChecklistItem | ChecklistSection>;
+  required: boolean;
+}
+
+// Sección (puede contener grupos)
+export interface ChecklistSection extends BaseElement {
+  type: "section";
+  elements: Array<ChecklistGroup | ChecklistItem>;
+  required: boolean;
+}
+
+// Template completo del checklist
+export interface ChecklistTemplate {
   id: string;
+  version: string;
   year: number;
   name: string;
   description?: string;
-  version: string;
-  sections: ChecklistSection[];
-  metadata: {
-    createdAt: Date;
-    updatedAt: Date;
-    createdBy: string;
-    updatedBy: string;
-    isActive: boolean;
-  };
+  type: "match" | "general";
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  elements: ChecklistSection[];
+  isActive: boolean;
+  metadata?: Record<string, any>;
 }
 
-export type InspectionType = "general" | "pre-match";
-
-export interface ChecklistResult {
+// Representa una inspección completada
+export interface CompletedChecklist {
   id: string;
-  checklistId: string;
-  teamId: string;
+  templateId: string;
+  templateVersion: string;
+  teamNumber: string;
+  eventKey: string;
   matchKey?: string;
-  alliance?: "red" | "blue";
-  inspectionType: InspectionType;
-  results: {
+  inspector: string;
+  startedAt: string;
+  completedAt?: string;
+  status: "in-progress" | "completed" | "failed";
+  responses: {
     [itemId: string]: {
       value: any;
+      timestamp: string;
+      inspector: string;
       notes?: string;
-      photos?: string[]; // URLs de las fotos
-      checkedBy: string;
-      timestamp: Date;
-      status: "pass" | "fail" | "warning" | "na";
+      media?: string[]; // URLs de fotos/videos
     };
   };
-  status: "in-progress" | "completed" | "failed";
-  metadata: {
-    createdAt: Date;
-    updatedAt: Date;
-    completedAt?: Date;
-    createdBy: string;
-    updatedBy: string;
-    completedBy?: string;
-  };
+  lastUpdated?: string;
+  criticalFailures?: string[]; // IDs de items críticos que fallaron
+  metadata?: Record<string, any>;
 }
 
-export interface CompoundChecklistItem extends ChecklistItemBase {
-  type: "compound";
-  fields: {
-    main: ChecklistItem;
-    supporting: ChecklistItem[];
-  };
-}
-
-// Actualizamos el tipo union ChecklistItem
-export type ChecklistItem =
-  | BooleanChecklistItem
-  | NumberChecklistItem
-  | TextChecklistItem
-  | PhotoChecklistItem
-  | SelectChecklistItem
-  | AllianceDependentItem
-  | CompoundChecklistItem;
-
-// Ejemplo de estructura para la batería
-export interface BatteryInspectionResult {
+// Historial de cambios
+export interface ChecklistChange {
   id: string;
-  voltage: number;
-  photoUrl: string;
-  batteryId: string;
-  timestamp: Date;
+  checklistId: string;
+  itemId: string;
+  timestamp: string;
+  inspector: string;
+  previousValue?: any;
+  newValue: any;
+  notes?: string;
 }
